@@ -1,0 +1,103 @@
+{
+  "name": "calmmail",
+  "version": "0.1.0",
+  "description": "A quiet AI-assisted background companion for Gmail users. Calm, context-aware, trust-first.",
+  "main": "out/main/index.js",
+  "author": "CalmMail",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "check:cloud": "node scripts/check-cloud-env.cjs",
+    "icons": "node scripts/generate-icons.mjs",
+    "notices": "node scripts/build-notices.mjs",
+    "pin:hashes": "node scripts/pin-model-hashes.mjs",
+    "package": "npm run notices && electron-vite build && electron-builder --dir",
+    "make": "npm run notices && electron-vite build && electron-builder",
+    "lint": "echo \"(lint not configured yet)\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.3",
+    "adm-zip": "^0.5.17",
+    "better-sqlite3": "^11.3.0",
+    "dotenv": "^16.6.1",
+    "googleapis": "^144.0.0",
+    "openai": "^4.67.0",
+    "systeminformation": "^5.23.5",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.0",
+    "@types/adm-zip": "^0.5.8",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.7.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "electron": "^32.1.2",
+    "electron-builder": "^25.1.7",
+    "electron-vite": "^2.3.0",
+    "png-to-ico": "^3.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sharp": "^0.34.5",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8"
+  },
+  "build": {
+    "appId": "com.calmmail.app",
+    "productName": "CalmMail",
+    "files": [
+      "out/**/*",
+      "resources/**/*",
+      "!resources/local-ai/bin/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/local-ai/bin",
+        "to": "local-ai/bin",
+        "filter": [
+          "**/*",
+          "!README.md"
+        ]
+      },
+      {
+        "from": "THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
+      }
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "resources"
+    },
+    "protocols": [
+      {
+        "name": "CalmMail Billing",
+        "schemes": ["calmmail"]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icons/app.ico"
+    },
+    "nsis": {
+      "installerIcon": "resources/icons/app.ico",
+      "uninstallerIcon": "resources/icons/app.ico",
+      "shortcutName": "CalmMail"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity",
+      "icon": "resources/icons/app-512.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "resources/icons"
+    }
+  }
+}

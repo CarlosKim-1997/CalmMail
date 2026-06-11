@@ -1,0 +1,92 @@
+/* Design tokens.
+ *
+ * The visual language is "quiet paper". Off-white background, gentle borders,
+ * dark slate ink, soft accent. Avoid pure black/white and any saturated AI
+ * gradients.
+ */
+
+:root {
+  /* surfaces */
+  --bg-app:        #fafaf7;
+  --bg-surface:    #ffffff;
+  --bg-muted:      #f4f3ee;
+  --bg-hover:      #f1efe9;
+
+  /* ink */
+  --ink-primary:   #1f2421;
+  --ink-secondary: #4b524f;
+  --ink-tertiary:  #7a8079;
+  --ink-disabled:  #b6b9b3;
+
+  /* borders */
+  --border-soft:   #ecebe5;
+  --border-strong: #d8d6cd;
+
+  /* accents (used sparingly) */
+  --accent-ink:    #2a4a3f;
+  --accent-bg:     #e8efe9;
+  --accent-strong: #345a4d;
+
+  /* priority signals (calm, not alarming) */
+  --prio-high-ink: #6c2b2b;
+  --prio-high-bg:  #f3e8e6;
+  --prio-med-ink:  #5a4a1f;
+  --prio-med-bg:   #f4edd9;
+  --prio-low-ink:  #525a52;
+  --prio-low-bg:   #eef0eb;
+
+  /* radii / spacing */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 40px;
+  --s-9: 56px;
+
+  /* type */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard',
+    'Noto Sans KR', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  /* shadow (very gentle) */
+  --shadow-soft: 0 1px 0 rgba(0, 0, 0, 0.02), 0 8px 24px rgba(20, 28, 26, 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-app:        #15181a;
+    --bg-surface:    #1c2022;
+    --bg-muted:      #20262a;
+    --bg-hover:      #262c30;
+
+    --ink-primary:   #ecece7;
+    --ink-secondary: #b5bab6;
+    --ink-tertiary:  #888d89;
+    --ink-disabled:  #555a58;
+
+    --border-soft:   #2a3034;
+    --border-strong: #393f43;
+
+    --accent-ink:    #aac7bb;
+    --accent-bg:     #21302b;
+    --accent-strong: #c9e0d4;
+
+    --prio-high-ink: #e8b6b1;
+    --prio-high-bg:  #3a2422;
+    --prio-med-ink:  #ddc586;
+    --prio-med-bg:   #322d1c;
+    --prio-low-ink:  #b1b8b3;
+    --prio-low-bg:   #232826;
+
+    --shadow-soft: 0 1px 0 rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+  }
+}
