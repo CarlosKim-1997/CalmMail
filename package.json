@@ -27,6 +27,7 @@
     "better-sqlite3": "^11.3.0",
     "dotenv": "^16.6.1",
     "googleapis": "^144.0.0",
+    "imapflow": "^1.4.6",
     "openai": "^4.67.0",
     "systeminformation": "^5.23.5",
     "zustand": "^4.5.5"
@@ -52,6 +53,7 @@
   "build": {
     "appId": "com.calmmail.app",
     "productName": "CalmMail",
+    "artifactName": "CalmMail-Setup-Windows-x64.${ext}",
     "files": [
       "out/**/*",
       "resources/**/*",
@@ -78,12 +80,15 @@
     "protocols": [
       {
         "name": "CalmMail Billing",
-        "schemes": ["calmmail"]
+        "schemes": [
+          "calmmail"
+        ]
       }
     ],
     "win": {
       "target": "nsis",
-      "icon": "resources/icons/app.ico"
+      "icon": "resources/icons/app.ico",
+      "signAndEditExecutable": false
     },
     "nsis": {
       "installerIcon": "resources/icons/app.ico",
