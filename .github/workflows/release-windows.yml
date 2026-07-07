@@ -22,6 +22,8 @@ jobs:
 
       - run: npm ci
 
+      - run: npm run notices
+
       - name: Build app bundle
         run: npm run build
 
