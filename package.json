@@ -1,6 +1,6 @@
 {
   "name": "calmmail",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A quiet AI-assisted background companion for your inbox. Calm, context-aware, trust-first — not an email client.",
   "main": "out/main/index.js",
   "author": "CalmMail",
