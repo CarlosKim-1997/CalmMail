@@ -271,6 +271,19 @@ function resolveTriage(
   return ruleBase;
 }
 
+/** Parse sparse `triageOverrides` JSON (pass-2 local or partial model output). */
+export function applyTriageOverridesFromText(
+  text: string,
+  input: BriefingInput,
+): TriageGroups {
+  const raw = safeJson(text) as RawPayload;
+  const ruleBase = buildRuleTriageGroups(input, input.unreadInScope);
+  const ambiguousIds = new Set(listAmbiguousTriageRows(input).map((r) => r.id));
+  const overrides = sanitizeTriageOverrides(raw.triageOverrides, ambiguousIds);
+  if (overrides.length === 0) return ruleBase;
+  return applyTriageOverrides(ruleBase, overrides, input);
+}
+
 function sanitizeTriageOverrides(
   v: unknown,
   ambiguousIds: Set<string>,

@@ -261,13 +261,18 @@ export function registerIpcHandlers(): void {
   register(IpcChannels.inboxTriageDismiss, async ({ emailIds }) => {
     const prefs = preferencesMemory.get();
     let gmailMarked = 0;
-    if (prefs.triageGmailMarkReadEnabled && hasGmailModifyScope()) {
+    const mailProvider = getActiveMailProvider();
+    const canServerMarkRead =
+      prefs.triageGmailMarkReadEnabled &&
+      mailProvider.capabilities.canMarkRead &&
+      (mailProvider.id !== 'gmail' || hasGmailModifyScope());
+    if (canServerMarkRead) {
       try {
-        gmailMarked = await getActiveMailProvider().markMessagesAsRead(emailIds);
+        gmailMarked = await mailProvider.markMessagesAsRead(emailIds);
         const dismissed = emailsRepo.markTriageReadLocally(emailIds);
         return { dismissed, gmailMarked };
       } catch (err) {
-        console.warn('[triage] Gmail mark-read failed; falling back to local dismiss', err);
+        console.warn('[triage] server mark-read failed; falling back to local dismiss', err);
       }
     }
     const dismissed = emailsRepo.markTriageDismissed(emailIds);

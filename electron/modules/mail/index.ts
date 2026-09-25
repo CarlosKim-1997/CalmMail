@@ -31,9 +31,14 @@ export {
   type ImapWatchHandle,
   type ImapWatchOptions,
   listInboxUids,
+  listSentUids,
   fetchMessagesByUid,
   markMessagesSeen,
   watchInbox,
+  peekImapOutgoingMessage,
+  imapSentRefId,
+  parseImapSentRefId,
+  IMAP_SENT_REF_PREFIX,
 } from './imap/imapClient';
 export { imapAccountStore } from './imap/imapAccountStore';
 export { getActiveProviderId, setActiveProviderId } from './activeAccount';

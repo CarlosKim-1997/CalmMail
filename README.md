@@ -1,6 +1,6 @@
 # CalmMail
 
-A quiet AI-assisted background companion for Gmail users.
+A quiet AI-assisted background companion for your inbox (Gmail OAuth or IMAP, including Proton Mail via Bridge).
 
 CalmMail is **not** an email client. It is a calm assistant that:
 
@@ -95,6 +95,12 @@ The dev server reads `.env` automatically.
 
 The **Electron main process** loads the same `.env` at startup (`electron/bootstrapEnv.ts` via `dotenv`), so `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` are visible to Gmail OAuth. If you change `.env`, fully quit the app (tray → Quit) and start `npm run dev` again.
 
+### 2b. Proton Mail (IMAP via Proton Bridge)
+
+CalmMail does not connect to Proton’s cloud IMAP directly. Install **[Proton Mail Bridge](https://proton.me/mail/bridge)** on the **same machine**, then use the in-app **Connect IMAP** flow with host `127.0.0.1`, port `1143`, Bridge password, and STARTTLS (turn **off** “Use TLS” in Advanced unless Bridge is set to implicit TLS). Loopback Bridge certificates are trusted by default; optional pinning via `CALMMAIL_IMAP_TLS_CA_FILE` in `.env`.
+
+Step-by-step setup, troubleshooting, and security notes: [`docs/proton-bridge-imap.md`](./docs/proton-bridge-imap.md).
+
 ### 3. (Optional) Cloud AI for dev / distributor builds
 
 The app **does not ask users for API keys**. Cloud mode is only available when
@@ -119,6 +125,8 @@ npm run make
 ```
 
 Artifacts land in `release/`.
+
+For a **safe distributable build** (no secrets in the installer, release smoke tests, CI tags), see [`docs/SHIP.md`](./docs/SHIP.md).
 
 ## Trust boundaries (read me before touching the AI module)
 

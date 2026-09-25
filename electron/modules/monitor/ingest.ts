@@ -44,8 +44,8 @@ export async function ingestFetchedMessages(
       provider: provider.id,
       accountId: provider.accountKey(),
       canonicalId: out.id,
-      providerMessageId: '',
-      rfcMessageId: null,
+      providerMessageId: m.providerMessageId,
+      rfcMessageId: m.rfcMessageId ?? null,
       threadKey: out.threadId,
     });
     classified.push(out);

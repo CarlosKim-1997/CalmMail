@@ -123,6 +123,10 @@ async function listMessageIdsByQuery(opts: {
 export interface FetchedMessage {
   summary: EmailSummary;
   headerSignals: HeaderSignals;
+  /** Provider-native id for server ops (Gmail id; IMAP INBOX UID string). */
+  providerMessageId: string;
+  /** Normalized RFC Message-ID when known (IMAP). */
+  rfcMessageId?: string | null;
 }
 
 /** Fetch a single message in `metadata` form — no body bytes downloaded. */
@@ -229,7 +233,12 @@ function rawToFetched(raw: RawMessage): FetchedMessage {
     triageDismissed: false,
   };
 
-  return { summary, headerSignals };
+  const rfcRaw = headerMap.get('message-id') ?? null;
+  const rfcMessageId = rfcRaw
+    ? rfcRaw.trim().replace(/^<+/, '').replace(/>+$/, '').trim() || null
+    : null;
+
+  return { summary, headerSignals, providerMessageId: raw.id!, rfcMessageId };
 }
 
 function parseAddress(raw: string): EmailAddress {

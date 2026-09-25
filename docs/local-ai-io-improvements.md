@@ -81,7 +81,8 @@ v2: 사용자 “느리지만 한 번에” 토글.
 |------|------|-----------|
 | **v1.1** ✅ | 로컬 managed: **규칙 triage + briefing-only 프롬프트** + `planLocalBriefingRequest` 사전 차단 (재시도 제거) | 출력 ~15배↓, infer 시간 레거시 근접 |
 | **v1.2** ✅ | 클라우드: 규칙 선분류 + `ambiguousForTriage` + `triageOverrides` sparse | 입력·출력 토큰 대폭↓ |
-| **v2** | A (2-pass) 또는 F (16k 옵션) | UX·대량 미읽음 |
+| **v1.3** ✅ | 규칙 triage 품질 + ambiguous(`snippet`, `score`, `reasonTags`) + **로컬 pass-2** 전용 짧은 프롬프트 (`TRIAGE_PASS2`, ≤24건) + sparse 예시(ko/en) | 로컬 triage ≈ 클라우드 sparse |
+| **v2** | A (full 2-pass briefing) 또는 F (16k 옵션) | UX·대량 미읽음 |
 
 ### v1.1 구현 요약 (managed local)
 

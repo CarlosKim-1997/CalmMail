@@ -28,6 +28,7 @@ import { bootstrapInboxFromGmail } from './modules/gmail/inboxBootstrap';
 import { recordPollResult, toMonitorPollReport } from './modules/monitor/inboxSync';
 import { backfillRecentEmails } from './modules/rules/backfill';
 import { getStoredTokens } from './modules/gmail/auth';
+import { getActiveMailProvider } from './modules/mail';
 import { BILLING_PROTOCOL } from './modules/monetization/billingEnv';
 import { handleBillingDeepLink } from './modules/monetization/billingDeepLink';
 import { bindBillingWindowProvider, notifyBillingChanged } from './modules/monetization/billingNotify';
@@ -163,14 +164,20 @@ if (!gotLock) {
     imapRealtime.onTick(broadcastPollReport);
     void imapRealtime.start();
 
-    if (getStoredTokens()) {
+    const runInboxBootstrap = () => {
+      void bootstrapInboxFromGmail()
+        .then(() => backfillRecentEmails())
+        .catch((err) => {
+          console.warn('[inbox] startup bootstrap failed', err);
+        });
+    };
+
+    if (getActiveMailProvider().isConnected()) {
+      runInboxBootstrap();
+    } else if (getStoredTokens()) {
       void verifyGmailSession().then((ok) => {
         if (!ok) return;
-        void bootstrapInboxFromGmail()
-          .then(() => backfillRecentEmails())
-          .catch((err) => {
-            console.warn('[inbox] startup bootstrap failed', err);
-          });
+        runInboxBootstrap();
       });
     }
   });

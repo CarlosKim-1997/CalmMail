@@ -19,6 +19,24 @@ interface Migration {
 
 const MIGRATIONS: Migration[] = [
   {
+    id: 6,
+    name: 'email_provider_message_id',
+    up: (db) => {
+      // Folder-scoped provider id (IMAP INBOX UID, Gmail message id) for read-state
+      // refresh and mark-read without re-listing the mailbox.
+      db.exec(`ALTER TABLE emails ADD COLUMN provider_message_id TEXT;`);
+      db.exec(`
+        UPDATE emails
+        SET provider_message_id = id
+        WHERE provider = 'gmail' AND (provider_message_id IS NULL OR provider_message_id = '');
+      `);
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_emails_provider_inbox_uid
+          ON emails(provider, account_id, provider_message_id);
+      `);
+    },
+  },
+  {
     id: 5,
     name: 'email_provider_identity',
     up: (db) => {

@@ -16,6 +16,7 @@ import { ProviderNotConfiguredError } from '../provider';
 import type { MemoryProposal, MorningBriefing } from '@shared/types';
 import { parseBriefingPayload } from '../parseBriefing';
 import { preflightLocalBriefing } from '../localBriefingRun';
+import { runLocalSparseTriagePass } from '../localTriagePass';
 import { briefingPerfMark } from '../briefingPerf';
 
 const OLLAMA_BASE = 'http://127.0.0.1:11434';
@@ -136,7 +137,29 @@ async function runOllamaBriefing(
   const data = JSON.parse(raw) as { message?: { content?: string } };
   const text = data.message?.content ?? '{}';
   briefingPerfMark('local_ai_ok', `ollama briefing-only inferMs=${Date.now() - t0}`);
-  return parseBriefingPayload(text, input, 'local');
+  const parsed = parseBriefingPayload(text, input, 'local');
+  parsed.briefing.triage = await runLocalSparseTriagePass(async (plan) => {
+    const body = JSON.stringify({
+      model,
+      stream: false,
+      format: 'json',
+      options: { temperature: 0.15, num_predict: plan.maxTokens },
+      messages: [
+        { role: 'system', content: plan.systemPrompt },
+        { role: 'user', content: plan.userPrompt },
+      ],
+    });
+    const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(120_000),
+      body,
+    });
+    if (!res.ok) throw new Error(`ollama_triage_${res.status}`);
+    const data = (await res.json()) as { message?: { content?: string } };
+    return data.message?.content ?? '{}';
+  }, input);
+  return parsed;
 }
 
 export const ollamaProvider: AiProvider = {

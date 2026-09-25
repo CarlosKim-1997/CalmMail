@@ -19,6 +19,7 @@ import { getActiveProvider } from './registry';
 import { hasPaidFeatures } from '@main/modules/monetization/snapshot';
 import { BRIEFING_IMPORTANT_EMAIL_CAP } from '@shared/monetization';
 import {
+  LOCAL_TRIAGE_AI_AMBIGUOUS_CAP,
   LOCAL_TRIAGE_USER_MAX,
   TRIAGE_UNREAD_AI_CAP,
   resolveTriageWindowDays,
@@ -70,8 +71,9 @@ export function estimateBriefingDuration(
   const unreadInScope = emailsRepo.countUnreadWithinDays(triageDays);
   const triageCap = isCloud ? TRIAGE_UNREAD_AI_CAP : LOCAL_TRIAGE_USER_MAX;
   const aiTriageCount = Math.min(unreadInScope, triageCap);
-  const ambiguousTriageCount = isCloud
-    ? estimateAmbiguousTriageCount(aiTriageCount)
+  const ambiguousTriageCount = estimateAmbiguousTriageCount(aiTriageCount);
+  const localPass2Ambiguous = !isCloud
+    ? Math.min(ambiguousTriageCount, LOCAL_TRIAGE_AI_AMBIGUOUS_CAP)
     : 0;
 
   // Deterministic prep: SQLite reads + inspection clustering.
@@ -99,7 +101,9 @@ export function estimateBriefingDuration(
             : 2.2;
     const ramFactor = cached && cached.totalRamGb < 12 ? 1.25 : 1;
     // Managed local: briefing-only model pass; triage is rule-based (no extra infer).
-    aiMs = Math.round((14_000 + important * 700) * mult * ramFactor);
+    aiMs = Math.round(
+      (14_000 + important * 700 + localPass2Ambiguous * 900) * mult * ramFactor,
+    );
   }
 
   const finalizeMs = 450;
@@ -113,7 +117,7 @@ export function estimateBriefingDuration(
   const estimatedMinSec = Math.max(5, Math.floor((estimatedMs * (1 - pad * 0.3)) / 1000));
   const estimatedMaxSec = Math.ceil((estimatedMs * (1 + pad)) / 1000);
 
-  const triageByRules = aiMode === 'local' && !isCloud;
+  const triageByRules = aiMode === 'local' && !isCloud && localPass2Ambiguous === 0;
 
   return {
     estimatedMs,

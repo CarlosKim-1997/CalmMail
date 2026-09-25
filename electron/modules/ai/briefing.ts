@@ -33,7 +33,7 @@ import { senderProfilesRepo } from '@main/modules/persistence/repositories/sende
 import { briefingsRepo } from '@main/modules/persistence/repositories/briefingsRepo';
 import { sessionMemory } from '@main/modules/memory/session';
 import { preferencesMemory } from '@main/modules/memory/preferences';
-import { getConnectedEmail } from '@main/modules/gmail/client';
+import { getActiveMailProvider } from '@main/modules/mail';
 import {
   ensureInboxCachedForBriefing,
   noMailErrorDetail,
@@ -141,7 +141,7 @@ export async function generateMorningBriefing(
   emit('gather', 10, estimate);
 
   const inboxSync = await ensureInboxCachedForBriefing();
-  if (inboxSync.reason === 'gmail_not_connected') {
+  if (inboxSync.reason === 'mail_not_connected' || inboxSync.reason === 'gmail_not_connected') {
     throw new BriefingGmailNotConnectedError();
   }
   if (inboxSync.reason?.startsWith('gmail_list_failed')) {
@@ -162,7 +162,7 @@ export async function generateMorningBriefing(
   );
   const classifyCtx: ClassifyContext = {
     preferences: prefs,
-    userPrimaryEmail: getConnectedEmail(),
+    userPrimaryEmail: getActiveMailProvider().getConnectedEmail(),
   };
   const allRecent = reclassifyForInspection(
     emailsRepo.recent(SCAN_WINDOW_LIMIT),
@@ -257,7 +257,7 @@ export async function generateMorningBriefing(
     importantRecent,
     awaited,
     vipContacts,
-    userPrimaryEmail: getConnectedEmail(),
+    userPrimaryEmail: getActiveMailProvider().getConnectedEmail(),
     outputLanguage: prefs.language ?? 'ko',
     inspected,
     learnedImportantCategories: prefs.learnedImportantCategories ?? [],

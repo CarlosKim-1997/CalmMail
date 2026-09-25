@@ -33,6 +33,7 @@ interface EmailRow {
   account_id?: string;
   rfc_message_id?: string | null;
   thread_key?: string | null;
+  provider_message_id?: string | null;
 }
 
 function rowToEmail(r: EmailRow): EmailSummary {
@@ -91,8 +92,8 @@ export const emailsRepo = {
            (id, thread_id, from_email, from_name, to_json, subject, snippet,
             received_at, is_unread, labels_json, importance_score, priority,
             reasons_json, seen_by_user, category, open_count,
-            provider, account_id, rfc_message_id, thread_key)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)
+            provider, account_id, rfc_message_id, thread_key, provider_message_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            thread_id = excluded.thread_id,
            from_email = excluded.from_email,
@@ -108,7 +109,8 @@ export const emailsRepo = {
            reasons_json = excluded.reasons_json,
            category = excluded.category,
            rfc_message_id = excluded.rfc_message_id,
-           thread_key = excluded.thread_key`,
+           thread_key = excluded.thread_key,
+           provider_message_id = COALESCE(NULLIF(excluded.provider_message_id, ''), provider_message_id)`,
       )
       .run(
         email.id,
@@ -130,8 +132,58 @@ export const emailsRepo = {
         ident.accountId,
         ident.rfcMessageId,
         ident.threadKey,
+        ident.providerMessageId,
       );
     return email;
+  },
+
+  getProviderMessageId(canonicalId: string): string | null {
+    const row = getDb()
+      .prepare<[string], { provider_message_id: string | null } | undefined>(
+        'SELECT provider_message_id FROM emails WHERE id = ?',
+      )
+      .get(canonicalId);
+    const v = row?.provider_message_id?.trim();
+    return v ? v : null;
+  },
+
+  /** Unread rows with stored INBOX UIDs for IMAP read-state refresh. */
+  unreadInboxRefsForProvider(
+    provider: string,
+    accountId: string,
+    withinDays: number,
+    limit: number,
+    canonicalIds?: string[],
+  ): Array<{ id: string; providerMessageId: string }> {
+    const cutoff = Date.now() - withinDays * 24 * 60 * 60 * 1000;
+    if (canonicalIds && canonicalIds.length > 0) {
+      const placeholders = canonicalIds.map(() => '?').join(',');
+      const sql = `SELECT id, provider_message_id AS providerMessageId FROM emails
+        WHERE id IN (${placeholders})
+          AND provider = ? AND account_id = ?
+          AND provider_message_id IS NOT NULL AND provider_message_id != ''`;
+      const rows = getDb()
+        .prepare(sql)
+        .all(...canonicalIds, provider, accountId) as Array<{
+        id: string;
+        providerMessageId: string;
+      }>;
+      return rows;
+    }
+    const rows = getDb()
+      .prepare(
+        `SELECT id, provider_message_id FROM emails
+         WHERE is_unread = 1 AND received_at >= ?
+           AND provider = ? AND account_id = ?
+           AND provider_message_id IS NOT NULL AND provider_message_id != ''
+         ORDER BY importance_score DESC, received_at DESC
+         LIMIT ?`,
+      )
+      .all(cutoff, provider, accountId, limit) as Array<{
+      id: string;
+      provider_message_id: string;
+    }>;
+    return rows.map((r) => ({ id: r.id, providerMessageId: r.provider_message_id }));
   },
 
   get(id: string): EmailSummary | null {

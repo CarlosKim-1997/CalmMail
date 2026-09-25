@@ -97,8 +97,8 @@ async function bootstrapWithQuery(
       provider: provider.id,
       accountId: provider.accountKey(),
       canonicalId: out.id,
-      providerMessageId: '',
-      rfcMessageId: null,
+      providerMessageId: m.providerMessageId,
+      rfcMessageId: m.rfcMessageId ?? null,
       threadKey: out.threadId,
     });
     classified.push(out);
@@ -124,7 +124,7 @@ async function bootstrapWithQuery(
  */
 export async function bootstrapInboxFromGmail(): Promise<InboxBootstrapReport> {
   if (!getActiveMailProvider().isConnected()) {
-    return { ran: false, reason: 'gmail_not_connected', listed: 0, fetched: 0, inserted: 0 };
+    return { ran: false, reason: 'mail_not_connected', listed: 0, fetched: 0, inserted: 0 };
   }
 
   let last: InboxBootstrapReport = { ran: true, listed: 0, fetched: 0, inserted: 0 };
