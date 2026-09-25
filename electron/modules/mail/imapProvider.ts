@@ -12,6 +12,7 @@
 
 import { MAIL_CAPABILITIES } from './capabilities';
 import type { MailListOptions, MailProvider, MailThreadUrlOptions } from './types';
+import { emailsRepo } from '@main/modules/persistence/repositories/emailsRepo';
 import { imapAccountStore } from './imap/imapAccountStore';
 import {
   fetchMessagesByUid,
@@ -71,7 +72,11 @@ export const imapProvider: MailProvider = {
   async markMessagesAsRead(ids: string[]) {
     const account = imapAccountStore.get();
     if (!account) return 0;
-    return markMessagesSeen(account, ids);
+    const uids = ids
+      .map((id) => emailsRepo.getProviderMessageId(id))
+      .filter((uid): uid is string => !!uid && /^\d+$/.test(uid));
+    if (uids.length === 0) return 0;
+    return markMessagesSeen(account, uids);
   },
 
   buildThreadUrl(_opts: MailThreadUrlOptions): string {

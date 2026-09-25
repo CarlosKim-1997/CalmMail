@@ -245,7 +245,12 @@ function toFetchedMessage(
     triageDismissed: false,
   };
 
-  return { summary, headerSignals: deriveHeaderSignals(headerMap) };
+  return {
+    summary,
+    headerSignals: deriveHeaderSignals(headerMap),
+    providerMessageId: identity.providerMessageId,
+    rfcMessageId: identity.rfcMessageId,
+  };
 }
 
 /**

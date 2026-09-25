@@ -1,6 +1,6 @@
 # CalmMail
 
-A quiet AI-assisted background companion for Gmail users.
+A quiet AI-assisted background companion for your inbox (Gmail OAuth or IMAP, including Proton Mail via Bridge).
 
 CalmMail is **not** an email client. It is a calm assistant that:
 
@@ -125,6 +125,8 @@ npm run make
 ```
 
 Artifacts land in `release/`.
+
+For a **safe distributable build** (no secrets in the installer, release smoke tests, CI tags), see [`docs/SHIP.md`](./docs/SHIP.md).
 
 ## Trust boundaries (read me before touching the AI module)
 
