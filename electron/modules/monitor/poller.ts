@@ -46,7 +46,7 @@ export function runPoll(): Promise<PollReport> {
 async function doPoll(): Promise<PollReport> {
   const provider = getActiveMailProvider();
   if (!provider.isConnected()) {
-    return zeroReport({ ran: false, reason: 'gmail_not_connected' });
+    return zeroReport({ ran: false, reason: 'mail_not_connected' });
   }
 
   const prefs = preferencesMemory.get();

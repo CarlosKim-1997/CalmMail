@@ -6,9 +6,7 @@
  * {@link gmailProvider} so the rest of the app stays provider-agnostic.
  *
  * MVP limitations (tracked for later steps):
- *  - INBOX only; `listSentMessageRefs` / `peekOutgoingMessage` are no-ops, so
- *    awaited-reply inference is not yet available for IMAP accounts.
- *  - Polling only (no IDLE yet).
+ *  - INBOX + Sent (SPECIAL-USE / common path fallbacks) only.
  *  - No web deep link (`canOpenInWeb` is false).
  */
 
@@ -18,7 +16,9 @@ import { imapAccountStore } from './imap/imapAccountStore';
 import {
   fetchMessagesByUid,
   listInboxUids,
+  listSentUids,
   markMessagesSeen,
+  peekImapOutgoingMessage,
 } from './imap/imapClient';
 
 export const imapProvider: MailProvider = {
@@ -43,9 +43,10 @@ export const imapProvider: MailProvider = {
     return listInboxUids(account, { maxMessages: opts.maxResults });
   },
 
-  async listSentMessageRefs() {
-    // MVP: sent-folder scanning not implemented yet.
-    return [];
+  async listSentMessageRefs(opts: { maxResults?: number } = {}) {
+    const account = imapAccountStore.get();
+    if (!account) return [];
+    return listSentUids(account, { maxMessages: opts.maxResults, sinceDays: 14 });
   },
 
   async fetchMessagesMetadata(ids: string[]) {
@@ -61,9 +62,10 @@ export const imapProvider: MailProvider = {
     return msg ?? null;
   },
 
-  async peekOutgoingMessage() {
-    // MVP: awaited-reply inference from Sent is not implemented for IMAP yet.
-    return null;
+  async peekOutgoingMessage(id: string, userEmail: string | null) {
+    const account = imapAccountStore.get();
+    if (!account) return null;
+    return peekImapOutgoingMessage(account, id, userEmail);
   },
 
   async markMessagesAsRead(ids: string[]) {

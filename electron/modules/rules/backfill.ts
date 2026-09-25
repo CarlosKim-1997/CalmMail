@@ -36,7 +36,7 @@ export function backfillRecentEmails(opts?: { limit?: number }): Promise<Backfil
 async function doBackfill(opts?: { limit?: number }): Promise<BackfillReport> {
   const tokens = getStoredTokens();
   if (!tokens?.access_token && !tokens?.refresh_token) {
-    return { ran: false, reason: 'gmail_not_connected', scanned: 0, updated: 0 };
+    return { ran: false, reason: 'mail_not_connected', scanned: 0, updated: 0 };
   }
 
   const limit = opts?.limit ?? DEFAULT_LIMIT;

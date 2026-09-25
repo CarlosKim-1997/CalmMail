@@ -1,6 +1,10 @@
 /**
- * Re-fetch Gmail metadata for cached messages so `is_unread` stays aligned
- * after the user reads mail in Gmail (poller only ingests *new* ids).
+ * Re-fetch provider metadata for cached messages so `is_unread` stays aligned
+ * after the user reads mail elsewhere (poller only ingests *new* ids).
+ *
+ * IMAP stores canonical ids; {@link fetchMessagesByUid} only accepts numeric
+ * inbox UIDs, so this is effectively a no-op until read-state refresh maps
+ * canonical ids back to folder UIDs.
  */
 
 import { getActiveMailProvider } from '@main/modules/mail';

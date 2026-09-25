@@ -21,7 +21,7 @@ import {
   type MessageStructureObject,
 } from 'imapflow';
 import type { EmailAddress, EmailSummary } from '@shared/types';
-import type { FetchedMessage, MailMessageRef } from '../types';
+import type { FetchedMessage, MailMessageRef, OutgoingMessagePeek } from '../types';
 import { MAIL_CAPABILITIES } from '../capabilities';
 import { buildMailIdentity } from '../identity';
 import {
@@ -50,6 +50,47 @@ const SNIPPET_MAX = 280;
 const SUBJECT_MAX = 240;
 const SNIPPET_FETCH_BYTES = 4096;
 const HEADER_FETCH_FIELDS = ['references', ...HEADER_SIGNAL_FIELDS];
+
+/** Prefix for sent-folder UIDs in {@link MailMessageRef.id} (avoids inbox UID collisions). */
+export const IMAP_SENT_REF_PREFIX = 'sent:';
+
+export function imapSentRefId(uid: number): string {
+  return `${IMAP_SENT_REF_PREFIX}${uid}`;
+}
+
+export function parseImapSentRefId(id: string): number | null {
+  if (!id.startsWith(IMAP_SENT_REF_PREFIX)) return null;
+  const n = Number.parseInt(id.slice(IMAP_SENT_REF_PREFIX.length), 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+const SENT_FALLBACK_PATHS = [
+  'Sent',
+  'INBOX.Sent',
+  '[Gmail]/Sent Mail',
+  'Sent Items',
+  'Sent Messages',
+] as const;
+
+async function resolveSentMailboxPath(client: ImapFlow): Promise<string> {
+  const boxes = await client.list();
+  const bySpecial = boxes.find((b) => b.specialUse === '\\Sent');
+  if (bySpecial) return bySpecial.path;
+  for (const guess of SENT_FALLBACK_PATHS) {
+    const match = boxes.find((b) => b.path === guess || b.name === guess);
+    if (match) return match.path;
+  }
+  for (const guess of SENT_FALLBACK_PATHS) {
+    try {
+      await client.mailboxOpen(guess);
+      await client.mailboxClose();
+      return guess;
+    } catch {
+      /* try next */
+    }
+  }
+  throw new Error('sent_mailbox_not_found');
+}
 
 function makeClient(account: ImapAccount): ImapFlow {
   return new ImapFlow({
@@ -259,7 +300,7 @@ export async function listInboxUids(
   }
 }
 
-/** Fetch normalized metadata (+ header signals + snippet) for the given UIDs. */
+/** Fetch normalized metadata (+ header signals + snippet) for the given INBOX UIDs. */
 export async function fetchMessagesByUid(
   account: ImapAccount,
   uids: string[],
@@ -269,15 +310,104 @@ export async function fetchMessagesByUid(
   // than an "invalid UID range" error.
   const numericUids = uids.filter((u) => /^\d+$/.test(u));
   if (numericUids.length === 0) return [];
+  return fetchMessagesByUidInMailbox(account, 'INBOX', numericUids);
+}
+
+async function fetchMessagesByUidInMailbox(
+  account: ImapAccount,
+  mailboxPath: string,
+  numericUids: string[],
+): Promise<FetchedMessage[]> {
+  if (numericUids.length === 0) return [];
   const client = makeClient(account);
   await client.connect();
   try {
-    const lock = await client.getMailboxLock('INBOX');
+    const lock = await client.getMailboxLock(mailboxPath);
     try {
       const entries = await fetchEntriesOnClient(client, account, numericUids.join(','));
       return entries
         .map((e) => e.fetched)
         .sort((a, b) => b.summary.receivedAt - a.summary.receivedAt);
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout();
+  }
+}
+
+/** List recent Sent-folder message refs (prefixed UIDs), newest last. */
+export async function listSentUids(
+  account: ImapAccount,
+  opts: ImapListOptions = {},
+): Promise<MailMessageRef[]> {
+  const client = makeClient(account);
+  await client.connect();
+  try {
+    const sentPath = await resolveSentMailboxPath(client);
+    const lock = await client.getMailboxLock(sentPath);
+    try {
+      const sinceDays = opts.sinceDays ?? 14;
+      const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
+      const found = await client.search({ since }, { uid: true });
+      const uids = found || [];
+      const limited =
+        opts.maxMessages && uids.length > opts.maxMessages
+          ? uids.slice(-opts.maxMessages)
+          : uids;
+      return limited.map((uid) => ({
+        id: imapSentRefId(uid),
+        threadId: imapSentRefId(uid),
+      }));
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout();
+  }
+}
+
+/**
+ * Transient peek at a sent message for awaited-reply heuristics. `id` must be
+ * a {@link imapSentRefId} from {@link listSentUids}.
+ */
+export async function peekImapOutgoingMessage(
+  account: ImapAccount,
+  id: string,
+  userEmail: string | null,
+): Promise<OutgoingMessagePeek | null> {
+  const uid = parseImapSentRefId(id);
+  if (uid == null) return null;
+
+  const client = makeClient(account);
+  await client.connect();
+  try {
+    const sentPath = await resolveSentMailboxPath(client);
+    const lock = await client.getMailboxLock(sentPath);
+    try {
+      const entries = await fetchEntriesOnClient(client, account, String(uid));
+      const entry = entries.find((e) => e.uid === uid);
+      if (!entry) return null;
+
+      const { summary } = entry.fetched;
+      const userNorm = userEmail?.trim().toLowerCase() ?? null;
+      const fromEmail = summary.from.email;
+      const isSentByUser = userNorm ? fromEmail === userNorm : true;
+
+      const toList = summary.to;
+      const toEmail =
+        toList.find((a) => a.email !== userNorm)?.email ?? toList[0]?.email ?? '';
+      if (!toEmail) return null;
+
+      return {
+        id,
+        threadId: summary.threadId,
+        toEmail,
+        subject: summary.subject,
+        sentAt: summary.receivedAt,
+        snippet: summary.snippet,
+        isSentByUser,
+      };
     } finally {
       lock.release();
     }
