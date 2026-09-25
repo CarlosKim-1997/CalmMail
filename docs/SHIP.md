@@ -1,13 +1,16 @@
 # CalmMail — 배포 체크리스트 (무해한 설치본)
 
-CalmMail은 **메일 클라이언트가 아닌** 백그라운드 동반 앱입니다. 배포본은 사용자 PC에서만 동작하고, 아래 신뢰 경계를 지키는 것이 목표입니다.
+CalmMail은 **메일 클라이언트가 아닌** 백그라운드 동반 앱입니다. 사용자가 **「메일 처리 시작」**을 누르면 AI가 캐시된 메타·스니펫으로 브리핑·정리 순서(triage)를 생성합니다. 배포본은 사용자 PC에서만 동작하고, 아래 신뢰 경계를 지키는 것이 목표입니다.
+
+제품 구조 한 장: [`PRODUCT-DIRECTION.md`](./PRODUCT-DIRECTION.md)
 
 ## 신뢰 경계 (배포 전 필수 확인)
 
 | 약속 | 코드 근거 |
 |------|-----------|
 | 메일 **본문** 미저장 | SQLite에는 snippet(≤280자)만 |
-| 메일마다 AI 호출 없음 | `poller` / IDLE → 규칙 엔진만 |
+| **백그라운드** 수신 경로에 AI 없음 | `poller` / IDLE → 규칙 엔진만 |
+| **온디맨드** 메일 처리 시 AI가 메타·snippet 읽음 | `ai/briefing.ts` → `runBriefing` |
 | AI가 메모리 직접 수정 불가 | `proposalValidator` + `proposal_log` |
 | Gmail **읽기** scope 기본; 수정은 opt-in | OAuth scope 분리 |
 | 비밀번호·토큰 OS 암호화 | `safeStorage` — 불가 시 저장 거부 |
