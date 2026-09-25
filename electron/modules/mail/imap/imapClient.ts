@@ -29,6 +29,7 @@ import {
   deriveHeaderSignals,
   parseHeaderBlock,
 } from '../headerSignals';
+import { resolveImapTlsOptions } from './imapTls';
 
 export interface ImapAccount {
   /** Stable account key, e.g. `imap:user@host`. */
@@ -52,12 +53,14 @@ const SNIPPET_FETCH_BYTES = 4096;
 const HEADER_FETCH_FIELDS = ['references', ...HEADER_SIGNAL_FIELDS];
 
 function makeClient(account: ImapAccount): ImapFlow {
+  const tls = resolveImapTlsOptions(account.host);
   return new ImapFlow({
     host: account.host,
     port: account.port,
     secure: account.secure,
     auth: { user: account.user, pass: account.pass },
     logger: false,
+    ...(tls ? { tls } : {}),
   });
 }
 
