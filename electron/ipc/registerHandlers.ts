@@ -35,6 +35,7 @@ import {
   type ImapAccount,
 } from '@main/modules/mail';
 import { refreshStoredUnreadFlags } from '@main/modules/gmail/readStateSync';
+import { imapRealtime } from '@main/modules/monitor/imapRealtime';
 import { emailsRepo } from '@main/modules/persistence/repositories/emailsRepo';
 import { contactsRepo } from '@main/modules/persistence/repositories/contactsRepo';
 import { awaitedRepo } from '@main/modules/persistence/repositories/awaitedRepo';
@@ -189,15 +190,18 @@ export function registerIpcHandlers(): void {
     imapAccountStore.set(account);
     setActiveProviderId('imap');
     notifyAuthChanged();
-    void bootstrapInboxFromGmail().catch((e) => {
-      console.warn('[imap] post-connect bootstrap failed', e);
-    });
+    void bootstrapInboxFromGmail()
+      .then(() => imapRealtime.restart())
+      .catch((e) => {
+        console.warn('[imap] post-connect bootstrap failed', e);
+      });
     return buildAuthStatus();
   });
 
-  register(IpcChannels.imapDisconnect, () => {
+  register(IpcChannels.imapDisconnect, async () => {
     imapAccountStore.clear();
     setActiveProviderId('gmail');
+    await imapRealtime.stop();
     notifyAuthChanged();
     return buildAuthStatus();
   });

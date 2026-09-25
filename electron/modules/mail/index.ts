@@ -28,9 +28,12 @@ export {
 export {
   type ImapAccount,
   type ImapListOptions,
+  type ImapWatchHandle,
+  type ImapWatchOptions,
   listInboxUids,
   fetchMessagesByUid,
   markMessagesSeen,
+  watchInbox,
 } from './imap/imapClient';
 export { imapAccountStore } from './imap/imapAccountStore';
 export { getActiveProviderId, setActiveProviderId } from './activeAccount';

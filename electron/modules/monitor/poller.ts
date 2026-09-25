@@ -19,6 +19,7 @@ import { sessionMemory } from '@main/modules/memory/session';
 import { ruleEngine } from '@main/modules/rules/engine';
 import { notificationManager } from '@main/modules/notification/manager';
 import { refreshStoredUnreadFlags } from '@main/modules/gmail/readStateSync';
+import { ingestFetchedMessages } from './ingest';
 import { runSentPoll, type SentPollReport } from './sentPoller';
 import type { EmailSummary } from '@shared/types';
 
@@ -98,36 +99,13 @@ async function doPoll(): Promise<PollReport> {
     throw err;
   }
 
-  let highCount = 0;
-  let mediumCount = 0;
-  const classified: EmailSummary[] = [];
-
-  for (const m of metas) {
-    const out = ruleEngine.classifyIncoming(m.summary, {
-      preferences: prefs,
-      userPrimaryEmail: userPrimary,
-      headerSignals: m.headerSignals,
-    });
-    emailsRepo.upsert(out, {
-      provider: provider.id,
-      accountId: provider.accountKey(),
-      canonicalId: out.id,
-      providerMessageId: '',
-      rfcMessageId: null,
-      threadKey: out.threadId,
-    });
-    classified.push(out);
-
-    if (out.priority === 'HIGH') {
-      sessionMemory.pushPriorityThread(out.threadId);
-      highCount += 1;
-    } else if (out.priority === 'MEDIUM') {
-      mediumCount += 1;
-    }
-  }
-
-  // Hand the classified batch to the notification manager.
-  await notificationManager.handleNewlyClassified(classified, prefs);
+  const { classified, newHighPriority, newMediumPriority } = await ingestFetchedMessages(
+    metas,
+    provider,
+    { preferences: prefs, userPrimaryEmail: userPrimary },
+  );
+  const highCount = newHighPriority;
+  const mediumCount = newMediumPriority;
 
   try {
     await refreshStoredUnreadFlags();
