@@ -56,6 +56,12 @@ export interface MailThreadUrlOptions {
  */
 export interface MailCapabilities {
   /**
+   * Provider message ids are globally unique and stable (Gmail message ids).
+   * When false (IMAP `UID` is folder-scoped and tied to `UIDVALIDITY`), a
+   * canonical id must be derived from the RFC `Message-ID` header instead.
+   */
+  globalMessageIds: boolean;
+  /**
    * Provider returns native conversation/thread ids (Gmail). When false,
    * threading must be derived from `References` / `In-Reply-To` headers.
    */

@@ -11,6 +11,7 @@ import type { MailCapabilities, MailProviderId } from './types';
 
 export const MAIL_CAPABILITIES: Record<MailProviderId, MailCapabilities> = {
   gmail: {
+    globalMessageIds: true,
     nativeThreads: true,
     serverSnippet: true,
     serverCategories: true,
@@ -23,6 +24,8 @@ export const MAIL_CAPABILITIES: Record<MailProviderId, MailCapabilities> = {
     implemented: true,
   },
   imap: {
+    // UIDs are folder-scoped and tied to UIDVALIDITY — not globally stable.
+    globalMessageIds: false,
     // No native conversation ids — threading is derived from message headers.
     nativeThreads: false,
     // No server snippet — must be synthesized from a transiently fetched body.
@@ -36,6 +39,7 @@ export const MAIL_CAPABILITIES: Record<MailProviderId, MailCapabilities> = {
     implemented: false,
   },
   pop: {
+    globalMessageIds: false,
     nativeThreads: false,
     serverSnippet: false,
     serverCategories: false,
