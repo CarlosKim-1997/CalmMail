@@ -28,6 +28,7 @@ Rules for triageOverrides:
 - Unread mail is ALREADY sorted by rules (see ambiguousForTriage.ruleDefault).
 - ONLY list ids where you disagree with ruleDefault or want a sharper reason.
 - Use ONLY emailId values from "ambiguousForTriage". At most one entry per id.
+- Use subject + snippet to judge urgency; do not invent facts.
 - Omit the field or use [] when rule defaults are fine.
 - "reason" is optional, max 80 chars, outputLanguage.
 `;

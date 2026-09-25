@@ -14,6 +14,9 @@ export const LOCAL_TRIAGE_USER_MAX = 40;
 /** Tighter cap for local llama-server (8192 ctx incl. output). */
 export const LOCAL_TRIAGE_UNREAD_AI_CAP = LOCAL_TRIAGE_USER_MAX;
 
+/** Max ambiguous unread rows sent to local pass-2 (sparse triageOverrides). */
+export const LOCAL_TRIAGE_AI_AMBIGUOUS_CAP = 18;
+
 export const TRIAGE_GROUP_IDS = ['now', 'today', 'later'] as const;
 
 export function resolveTriageWindowDays(raw: unknown): TriageWindowDays {

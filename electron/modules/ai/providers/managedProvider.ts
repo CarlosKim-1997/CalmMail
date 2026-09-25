@@ -12,9 +12,9 @@
  * If any of the above is missing we throw `LocalAiNotReadyError` with a
  * specific reason so the UI can point the user to setup.
  *
- * Triage: rule engine (`finalizeTriageGroups` in parseBriefing) — the model
- * only writes briefing prose. Preflight `planLocalBriefingRequest` blocks
- * overflow before inference; no cap-down retries.
+ * Pass 1: briefing prose only (`planLocalBriefingRequest` preflight).
+ * Pass 2 (optional): sparse `triageOverrides` for ambiguous unread (`localTriagePass`).
+ * Rule baseline always applies first; no cap-down retries on pass 1.
  */
 
 import OpenAI from 'openai';
@@ -22,6 +22,7 @@ import type { AiProvider, BriefingInput, BriefingResult } from '../provider';
 import { BriefingContextOverflowError, LocalAiNotReadyError } from '../provider';
 import { parseBriefingPayload } from '../parseBriefing';
 import { preflightLocalBriefing } from '../localBriefingRun';
+import { runLocalSparseTriagePass } from '../localTriagePass';
 import { briefingPerfMark } from '../briefingPerf';
 import { preferencesMemory } from '@main/modules/memory/preferences';
 import { isLocalAiNoticeCurrent } from '@shared/localAiPolicy';
@@ -114,7 +115,30 @@ async function runManagedBriefing(input: BriefingInput): Promise<BriefingResult>
   }
 
   briefingPerfMark('local_ai_ok', `briefing-only inferMs=${Date.now() - t0}`);
-  return parseBriefingPayload(content, input, 'local');
+  const parsed = parseBriefingPayload(content, input, 'local');
+  const modelId = preferencesMemory.get().localAiModelId ?? 'managed';
+  parsed.briefing.triage = await runLocalSparseTriagePass(async (plan) => {
+    const baseRequest = {
+      model: modelId,
+      temperature: 0.15,
+      max_tokens: plan.maxTokens,
+      messages: [
+        { role: 'system' as const, content: plan.systemPrompt },
+        { role: 'user' as const, content: plan.userPrompt },
+      ],
+    };
+    try {
+      const resp = await client.chat.completions.create({
+        ...baseRequest,
+        response_format: { type: 'json_object' },
+      });
+      return resp.choices[0]?.message?.content ?? '{}';
+    } catch {
+      const resp = await client.chat.completions.create(baseRequest);
+      return resp.choices[0]?.message?.content ?? '{}';
+    }
+  }, input);
+  return parsed;
 }
 
 function isContextOverflowError(err: unknown): boolean {
