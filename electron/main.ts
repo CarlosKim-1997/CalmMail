@@ -33,6 +33,7 @@ import { BILLING_PROTOCOL } from './modules/monetization/billingEnv';
 import { handleBillingDeepLink } from './modules/monetization/billingDeepLink';
 import { bindBillingWindowProvider, notifyBillingChanged } from './modules/monetization/billingNotify';
 import { maybeStartStripeWebhookDevServer } from './modules/monetization/stripeWebhookDev';
+import { seedDemoUiIfEnabled } from './demo/seedDemoUi';
 
 let mainWindow: BrowserWindow | null = null;
 let quitting = false;
@@ -136,6 +137,7 @@ if (!gotLock) {
   app.whenReady().then(async () => {
     // Touch the DB once to run migrations early.
     getDb();
+    seedDemoUiIfEnabled();
 
     registerIpcHandlers();
     bindBillingWindowProvider(getWindow);
