@@ -11,6 +11,7 @@
  * Cost characteristic: O(new messages) Gmail metadata calls. No AI tokens.
  */
 
+import { isDemoUiEnabled } from '@main/demo/demoUiEnv';
 import { getActiveMailProvider } from '@main/modules/mail';
 import { onGmailApiAuthFailure } from '@main/modules/gmail/session';
 import { emailsRepo } from '@main/modules/persistence/repositories/emailsRepo';
@@ -44,6 +45,10 @@ export function runPoll(): Promise<PollReport> {
 }
 
 async function doPoll(): Promise<PollReport> {
+  if (isDemoUiEnabled()) {
+    return zeroReport({ ran: false, reason: 'demo_ui' });
+  }
+
   const provider = getActiveMailProvider();
   if (!provider.isConnected()) {
     return zeroReport({ ran: false, reason: 'mail_not_connected' });

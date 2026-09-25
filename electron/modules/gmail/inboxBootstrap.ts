@@ -4,6 +4,7 @@
  * without this pass, a fresh install can run briefings on 0 messages forever.
  */
 
+import { isDemoUiEnabled } from '@main/demo/demoUiEnv';
 import { getActiveMailProvider } from '@main/modules/mail';
 import { emailsRepo } from '@main/modules/persistence/repositories/emailsRepo';
 import { preferencesMemory } from '@main/modules/memory/preferences';
@@ -123,6 +124,10 @@ async function bootstrapWithQuery(
  * Lists inbox messages with fallback queries and stores metadata locally.
  */
 export async function bootstrapInboxFromGmail(): Promise<InboxBootstrapReport> {
+  if (isDemoUiEnabled()) {
+    return { ran: false, reason: 'demo_ui', listed: 0, fetched: 0, inserted: 0 };
+  }
+
   if (!getActiveMailProvider().isConnected()) {
     return { ran: false, reason: 'mail_not_connected', listed: 0, fetched: 0, inserted: 0 };
   }
