@@ -18,4 +18,19 @@ export {
   fallbackMessageHash,
 } from './identity';
 export { gmailProvider } from './gmailProvider';
+export { imapProvider } from './imapProvider';
+export {
+  type ImapServerConfig,
+  resolveImapServer,
+  hasKnownImapServer,
+  emailDomain,
+} from './imap/autoconfig';
+export {
+  type ImapAccount,
+  type ImapListOptions,
+  listInboxUids,
+  fetchMessagesByUid,
+  markMessagesSeen,
+} from './imap/imapClient';
+export { imapAccountStore } from './imap/imapAccountStore';
 export { getActiveMailProvider, getMailProvider } from './registry';
