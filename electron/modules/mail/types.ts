@@ -104,6 +104,11 @@ export interface MailProvider {
   isConnected(): boolean;
   /** Primary address of the linked account, if known. */
   getConnectedEmail(): string | null;
+  /**
+   * Stable account key for this provider's linked account, used to scope stored
+   * identity (`account_id`). e.g. `gmail` or `imap:user@host`.
+   */
+  accountKey(): string;
 
   /** Recent inbox message references (ids only; no bodies fetched). */
   listInboxMessageRefs(opts?: MailListOptions): Promise<MailMessageRef[]>;

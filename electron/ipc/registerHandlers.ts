@@ -25,7 +25,15 @@ import {
   resetGmailSessionState,
   verifyGmailSession,
 } from '@main/modules/gmail/session';
-import { getActiveMailProvider } from '@main/modules/mail';
+import {
+  getActiveMailProvider,
+  getActiveProviderId,
+  imapAccountStore,
+  listInboxUids,
+  resolveImapServer,
+  setActiveProviderId,
+  type ImapAccount,
+} from '@main/modules/mail';
 import { refreshStoredUnreadFlags } from '@main/modules/gmail/readStateSync';
 import { emailsRepo } from '@main/modules/persistence/repositories/emailsRepo';
 import { contactsRepo } from '@main/modules/persistence/repositories/contactsRepo';
@@ -155,6 +163,42 @@ export function registerIpcHandlers(): void {
       throw new Error(res.reason);
     }
     markGmailSessionHealthy();
+    return buildAuthStatus();
+  });
+
+  register(IpcChannels.imapAutoconfig, ({ email }) => {
+    return resolveImapServer(email);
+  });
+
+  register(IpcChannels.imapConnect, async (req) => {
+    const email = req.email.trim();
+    const account: ImapAccount = {
+      accountId: `imap:${email.toLowerCase()}`,
+      host: req.host.trim(),
+      port: req.port,
+      secure: req.secure,
+      user: req.user.trim() || email,
+      pass: req.pass,
+    };
+    // Validate credentials + connectivity by performing a real login + search.
+    try {
+      await listInboxUids(account, { maxMessages: 1 });
+    } catch (err) {
+      throw new Error(`IMAP connection failed: ${(err as Error).message}`);
+    }
+    imapAccountStore.set(account);
+    setActiveProviderId('imap');
+    notifyAuthChanged();
+    void bootstrapInboxFromGmail().catch((e) => {
+      console.warn('[imap] post-connect bootstrap failed', e);
+    });
+    return buildAuthStatus();
+  });
+
+  register(IpcChannels.imapDisconnect, () => {
+    imapAccountStore.clear();
+    setActiveProviderId('gmail');
+    notifyAuthChanged();
     return buildAuthStatus();
   });
 
@@ -563,9 +607,19 @@ function buildAuthStatus(): AuthStatus {
   const tokens = getStoredTokens();
   const linked = !!tokens?.access_token || !!tokens?.refresh_token;
   const { sessionHealthy, reconnectNeeded } = getGmailSessionFlags();
+
+  const imapAccount = imapAccountStore.get();
+  const imapConnected = imapAccount != null;
+  const activeId = getActiveProviderId();
+  const activeProvider =
+    activeId === 'imap' && imapConnected ? 'imap' : linked ? 'gmail' : imapConnected ? 'imap' : 'none';
+
   return {
     gmailConnected: linked,
     gmailEmail: tokens?.user_email ?? null,
+    imapConnected,
+    imapEmail: imapAccount?.user ?? null,
+    activeProvider,
     gmailSessionHealthy: linked && sessionHealthy && !reconnectNeeded,
     gmailReconnectNeeded: linked && reconnectNeeded,
     gmailModifyScopeGranted: hasGmailModifyScope(),

@@ -9,6 +9,7 @@
 
 import { gmailProvider } from './gmailProvider';
 import { imapProvider } from './imapProvider';
+import { getActiveProviderId } from './activeAccount';
 import type { MailProvider, MailProviderId } from './types';
 
 const PROVIDERS: Partial<Record<MailProviderId, MailProvider>> = {
@@ -16,8 +17,14 @@ const PROVIDERS: Partial<Record<MailProviderId, MailProvider>> = {
   imap: imapProvider,
 };
 
-/** The mail provider all read paths should currently go through. */
+/**
+ * The mail provider all read paths go through. Resolves the user's selected
+ * active provider (persisted), falling back to Gmail. An `imap` selection only
+ * takes effect while an IMAP account is actually linked.
+ */
 export function getActiveMailProvider(): MailProvider {
+  const active = getActiveProviderId();
+  if (active === 'imap' && imapProvider.isConnected()) return imapProvider;
   return gmailProvider;
 }
 

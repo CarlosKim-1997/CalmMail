@@ -22,6 +22,7 @@ import { ipc } from '@renderer/lib/ipc';
 export type RouteId =
   | 'onboarding'
   | 'gmail-login'
+  | 'imap-login'
   | 'ai-mode'
   | 'capability'
   | 'home'
@@ -41,6 +42,9 @@ interface AppState {
   clearGmailConnectError: () => void;
   gmailReconnectError: string | null;
   clearGmailReconnectError: () => void;
+  /** IMAP connect failure message; shown on the IMAP login screen. */
+  imapConnectError: string | null;
+  clearImapConnectError: () => void;
 
   authStatus: AuthStatus | null;
   preferences: UserPreferences | null;
@@ -95,6 +99,18 @@ interface AppState {
   reconnectGmail: () => Promise<void>;
   disconnectGmail: () => Promise<void>;
   requestGmailModifyScope: () => Promise<void>;
+  imapAutoconfig: (
+    email: string,
+  ) => Promise<{ host: string; port: number; secure: boolean } | null>;
+  connectImap: (params: {
+    email: string;
+    user: string;
+    pass: string;
+    host: string;
+    port: number;
+    secure: boolean;
+  }) => Promise<boolean>;
+  disconnectImap: () => Promise<void>;
   refreshInboxSync: () => Promise<void>;
   runPollNow: () => Promise<void>;
   onMonitorTick: (report: MonitorPollReport) => void;
@@ -135,6 +151,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   clearGmailConnectError: () => set({ gmailConnectError: null }),
   gmailReconnectError: null,
   clearGmailReconnectError: () => set({ gmailReconnectError: null }),
+  imapConnectError: null,
+  clearImapConnectError: () => set({ imapConnectError: null }),
 
   clearBriefingError: () => set({ briefingError: null }),
 
@@ -370,6 +388,37 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   async requestGmailModifyScope() {
     const authStatus = await ipc.invoke(ipc.channels.gmailRequestModifyScope);
+    set({ authStatus });
+  },
+
+  async imapAutoconfig(email) {
+    try {
+      return await ipc.invoke(ipc.channels.imapAutoconfig, { email });
+    } catch {
+      return null;
+    }
+  },
+
+  async connectImap(params) {
+    set({ imapConnectError: null });
+    try {
+      const authStatus = await ipc.invoke(ipc.channels.imapConnect, params);
+      set({ authStatus });
+      await Promise.all([get().refreshInbox(), get().refreshInboxSync()]);
+      return true;
+    } catch (err) {
+      set({ imapConnectError: ipcErrorMessage(err) });
+      try {
+        await get().refreshAuth();
+      } catch {
+        /* ignore */
+      }
+      return false;
+    }
+  },
+
+  async disconnectImap() {
+    const authStatus = await ipc.invoke(ipc.channels.imapDisconnect);
     set({ authStatus });
   },
 

@@ -5,6 +5,7 @@ import { ipc } from './lib/ipc';
 import { Sidebar } from './components/Sidebar';
 import { OnboardingScreen } from './screens/Onboarding';
 import { GmailLoginScreen } from './screens/GmailLogin';
+import { ImapLoginScreen } from './screens/ImapLogin';
 import { AiModeScreen } from './screens/AiMode';
 import { CapabilityScreen } from './screens/Capability';
 import { HomeScreen } from './screens/Home';
@@ -40,14 +41,16 @@ export function App() {
   // or "Get started" would immediately snap back to onboarding.
   useEffect(() => {
     if (!isBootstrapped || !authStatus) return;
-    const preGmailWizard: Array<typeof route> = [
+    const preConnectWizard: Array<typeof route> = [
       'onboarding',
       'gmail-login',
+      'imap-login',
       'ai-mode',
       'capability',
     ];
-    if (!authStatus.gmailConnected) {
-      if (!preGmailWizard.includes(route)) {
+    const connected = authStatus.gmailConnected || authStatus.imapConnected;
+    if (!connected) {
+      if (!preConnectWizard.includes(route)) {
         goto('onboarding');
       }
     } else if (route === 'onboarding') {
@@ -86,6 +89,7 @@ export function App() {
   const isOnboardingPath =
     route === 'onboarding' ||
     route === 'gmail-login' ||
+    route === 'imap-login' ||
     route === 'ai-mode' ||
     route === 'capability';
 
@@ -96,6 +100,7 @@ export function App() {
         {!isOnboardingPath && <GmailReconnectBanner />}
         {route === 'onboarding' && <OnboardingScreen />}
         {route === 'gmail-login' && <GmailLoginScreen />}
+        {route === 'imap-login' && <ImapLoginScreen />}
         {route === 'ai-mode' && <AiModeScreen />}
         {route === 'capability' && <CapabilityScreen />}
         {route === 'home' && <HomeScreen />}

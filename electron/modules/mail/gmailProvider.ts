@@ -38,6 +38,10 @@ export const gmailProvider: MailProvider = {
     return getConnectedEmail();
   },
 
+  accountKey(): string {
+    return 'gmail';
+  },
+
   listInboxMessageRefs(opts: MailListOptions = {}): Promise<MailMessageRef[]> {
     return listRecentMessageIds({ maxResults: opts.maxResults, query: opts.query });
   },

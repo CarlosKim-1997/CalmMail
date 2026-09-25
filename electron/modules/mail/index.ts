@@ -33,4 +33,5 @@ export {
   markMessagesSeen,
 } from './imap/imapClient';
 export { imapAccountStore } from './imap/imapAccountStore';
+export { getActiveProviderId, setActiveProviderId } from './activeAccount';
 export { getActiveMailProvider, getMailProvider } from './registry';
