@@ -4,12 +4,7 @@
  * without this pass, a fresh install can run briefings on 0 messages forever.
  */
 
-import { getStoredTokens } from './auth';
-import {
-  fetchMessagesMetadata,
-  getConnectedEmail,
-  listRecentMessageIds,
-} from './client';
+import { getActiveMailProvider } from '@main/modules/mail';
 import { emailsRepo } from '@main/modules/persistence/repositories/emailsRepo';
 import { preferencesMemory } from '@main/modules/memory/preferences';
 import { ruleEngine } from '@main/modules/rules/engine';
@@ -53,12 +48,13 @@ function existingIdSet(ids: string[]): Set<string> {
 async function bootstrapWithQuery(
   query: string,
 ): Promise<InboxBootstrapReport & { queryUsed: string }> {
+  const provider = getActiveMailProvider();
   const prefs = preferencesMemory.get();
-  const userPrimary = getConnectedEmail();
+  const userPrimary = provider.getConnectedEmail();
 
   let listed: Array<{ id: string; threadId: string }>;
   try {
-    listed = await listRecentMessageIds({
+    listed = await provider.listInboxMessageRefs({
       maxResults: BRIEFING_INBOX_SYNC_LIMIT,
       query,
     });
@@ -89,7 +85,7 @@ async function bootstrapWithQuery(
     };
   }
 
-  const metas = await fetchMessagesMetadata(newIds);
+  const metas = await provider.fetchMessagesMetadata(newIds);
   const classified: EmailSummary[] = [];
   for (const m of metas) {
     const out = ruleEngine.classifyIncoming(m.summary, {
@@ -120,7 +116,7 @@ async function bootstrapWithQuery(
  * Lists inbox messages with fallback queries and stores metadata locally.
  */
 export async function bootstrapInboxFromGmail(): Promise<InboxBootstrapReport> {
-  if (!getStoredTokens()) {
+  if (!getActiveMailProvider().isConnected()) {
     return { ran: false, reason: 'gmail_not_connected', listed: 0, fetched: 0, inserted: 0 };
   }
 

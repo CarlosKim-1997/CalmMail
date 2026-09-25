@@ -3,7 +3,7 @@
  * after the user reads mail in Gmail (poller only ingests *new* ids).
  */
 
-import { fetchMessagesMetadata } from './client';
+import { getActiveMailProvider } from '@main/modules/mail';
 import { emailsRepo } from '@main/modules/persistence/repositories/emailsRepo';
 import { preferencesMemory } from '@main/modules/memory/preferences';
 import { resolveTriageWindowDays } from '@shared/triage';
@@ -27,7 +27,7 @@ export async function refreshStoredUnreadFlags(opts?: {
 
   if (ids.length === 0) return 0;
 
-  const metas = await fetchMessagesMetadata(ids);
+  const metas = await getActiveMailProvider().fetchMessagesMetadata(ids);
   let updated = 0;
 
   for (const m of metas) {

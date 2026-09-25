@@ -11,12 +11,7 @@
  * Cost characteristic: O(new messages) Gmail metadata calls. No AI tokens.
  */
 
-import { getStoredTokens } from '@main/modules/gmail/auth';
-import {
-  fetchMessagesMetadata,
-  getConnectedEmail,
-  listRecentMessageIds,
-} from '@main/modules/gmail/client';
+import { getActiveMailProvider } from '@main/modules/mail';
 import { onGmailApiAuthFailure } from '@main/modules/gmail/session';
 import { emailsRepo } from '@main/modules/persistence/repositories/emailsRepo';
 import { preferencesMemory } from '@main/modules/memory/preferences';
@@ -48,16 +43,17 @@ export function runPoll(): Promise<PollReport> {
 }
 
 async function doPoll(): Promise<PollReport> {
-  if (!getStoredTokens()) {
+  const provider = getActiveMailProvider();
+  if (!provider.isConnected()) {
     return zeroReport({ ran: false, reason: 'gmail_not_connected' });
   }
 
   const prefs = preferencesMemory.get();
-  const userPrimary = getConnectedEmail();
+  const userPrimary = provider.getConnectedEmail();
 
   let recent: Array<{ id: string; threadId: string }>;
   try {
-    recent = await listRecentMessageIds({
+    recent = await provider.listInboxMessageRefs({
       maxResults: 50,
       query: 'in:inbox newer_than:30d',
     });
@@ -93,7 +89,7 @@ async function doPoll(): Promise<PollReport> {
 
   let metas;
   try {
-    metas = await fetchMessagesMetadata(newIds);
+    metas = await provider.fetchMessagesMetadata(newIds);
   } catch (err) {
     if (onGmailApiAuthFailure(err)) {
       console.warn('[gmail] session expired — use in-app reconnect');

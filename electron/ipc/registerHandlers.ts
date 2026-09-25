@@ -25,8 +25,7 @@ import {
   resetGmailSessionState,
   verifyGmailSession,
 } from '@main/modules/gmail/session';
-import { markMessagesAsRead } from '@main/modules/gmail/client';
-import { buildGmailThreadUrl } from '@main/modules/gmail/links';
+import { getActiveMailProvider } from '@main/modules/mail';
 import { refreshStoredUnreadFlags } from '@main/modules/gmail/readStateSync';
 import { emailsRepo } from '@main/modules/persistence/repositories/emailsRepo';
 import { contactsRepo } from '@main/modules/persistence/repositories/contactsRepo';
@@ -183,7 +182,7 @@ export function registerIpcHandlers(): void {
     }
     const openCount = emailsRepo.incrementOpenCount(emailId);
     const tokens = getStoredTokens();
-    const url = buildGmailThreadUrl({
+    const url = getActiveMailProvider().buildThreadUrl({
       threadId: threadId || email.threadId,
       authUserEmail: tokens?.user_email,
     });
@@ -216,7 +215,7 @@ export function registerIpcHandlers(): void {
     let gmailMarked = 0;
     if (prefs.triageGmailMarkReadEnabled && hasGmailModifyScope()) {
       try {
-        gmailMarked = await markMessagesAsRead(emailIds);
+        gmailMarked = await getActiveMailProvider().markMessagesAsRead(emailIds);
         const dismissed = emailsRepo.markTriageReadLocally(emailIds);
         return { dismissed, gmailMarked };
       } catch (err) {

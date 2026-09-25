@@ -3,12 +3,7 @@
  * No AI, no body persistence — metadata + snippet only for question heuristics.
  */
 
-import { getStoredTokens } from '@main/modules/gmail/auth';
-import {
-  getConnectedEmail,
-  listRecentSentMessageIds,
-  peekOutgoingMessage,
-} from '@main/modules/gmail/client';
+import { getActiveMailProvider } from '@main/modules/mail';
 import { processedSentRepo } from '@main/modules/persistence/repositories/processedSentRepo';
 import { ruleEngine } from '@main/modules/rules/engine';
 import { looksLikeQuestion } from '@main/modules/rules/awaitedReply';
@@ -34,14 +29,15 @@ export function runSentPoll(): Promise<SentPollReport> {
 }
 
 async function doSentPoll(): Promise<SentPollReport> {
-  if (!getStoredTokens()) {
+  const provider = getActiveMailProvider();
+  if (!provider.isConnected()) {
     return empty({ ran: false, reason: 'gmail_not_connected' });
   }
 
-  const userEmail = getConnectedEmail();
+  const userEmail = provider.getConnectedEmail();
   let ids: Array<{ id: string; threadId: string }>;
   try {
-    ids = await listRecentSentMessageIds({ maxResults: 20 });
+    ids = await provider.listSentMessageRefs({ maxResults: 20 });
   } catch (err) {
     return empty({ ran: false, reason: `gmail_sent_list_failed:${(err as Error).message}` });
   }
@@ -52,7 +48,7 @@ async function doSentPoll(): Promise<SentPollReport> {
 
   for (const { id } of pending) {
     try {
-      const peek = await peekOutgoingMessage(id, userEmail);
+      const peek = await provider.peekOutgoingMessage(id, userEmail);
       processedSentRepo.mark(id);
       processed += 1;
 
