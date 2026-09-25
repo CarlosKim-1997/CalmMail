@@ -43,6 +43,7 @@ import { preferencesMemory } from '@main/modules/memory/preferences';
 import { notificationsRepo } from '@main/modules/persistence/repositories/notificationsRepo';
 import { briefingsRepo } from '@main/modules/persistence/repositories/briefingsRepo';
 import { generateMorningBriefing } from '@main/modules/ai/briefing';
+import { DEMO_GMAIL_EMAIL, isDemoUiEnabled } from '@main/demo/demoUiEnv';
 import { estimateBriefingNow } from '@main/modules/ai/estimateBriefing';
 import type { BriefingProgress } from '@shared/types';
 import {
@@ -613,6 +614,21 @@ function billingIpcError(e: unknown): Error {
 }
 
 function buildAuthStatus(): AuthStatus {
+  if (isDemoUiEnabled()) {
+    return {
+      gmailConnected: true,
+      gmailEmail: DEMO_GMAIL_EMAIL,
+      imapConnected: false,
+      imapEmail: null,
+      activeProvider: 'gmail',
+      gmailSessionHealthy: true,
+      gmailReconnectNeeded: false,
+      gmailModifyScopeGranted: false,
+      cloudProviderConfigured: listProviders().some((p) => p.isCloud && p.isConfigured()),
+      gmailOAuthConfigured: true,
+    };
+  }
+
   const tokens = getStoredTokens();
   const linked = !!tokens?.access_token || !!tokens?.refresh_token;
   const { sessionHealthy, reconnectNeeded } = getGmailSessionFlags();

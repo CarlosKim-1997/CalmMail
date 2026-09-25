@@ -36,6 +36,7 @@ GOOGLE_OAUTH_CLIENT_SECRET=...
 # CALMMAIL_DEV_PREMIUM=0
 ```
 
+- **데모 UI (개발·캡처 전용, 설치본 금지):** `CALMMAIL_DEMO_UI=1 npm run dev` — OAuth 없이 시드된 브리핑·triage UI. Gmail/IMAP API는 호출하지 않음.
 - **Stripe / 결제**: 실 서비스 전까지 `CALMMAIL_BILLING_STUB` 사용 금지(내부 QA만).
 - **API 키**: 최종 사용자에게 입력받지 않음 — 빌드에 넣거나 로컬 AI만.
 

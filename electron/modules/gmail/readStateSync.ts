@@ -3,6 +3,7 @@
  * after the user reads mail elsewhere (poller only ingests *new* ids).
  */
 
+import { isDemoUiEnabled } from '@main/demo/demoUiEnv';
 import {
   fetchMessagesByUid,
   getActiveMailProvider,
@@ -17,6 +18,8 @@ export async function refreshStoredUnreadFlags(opts?: {
   limit?: number;
   emailIds?: string[];
 }): Promise<number> {
+  if (isDemoUiEnabled()) return 0;
+
   const provider = getActiveMailProvider();
   if (provider.id === 'imap') {
     return refreshImapUnreadFlags(provider.accountKey(), opts);
