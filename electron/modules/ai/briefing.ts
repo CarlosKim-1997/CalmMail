@@ -141,7 +141,7 @@ export async function generateMorningBriefing(
   emit('gather', 10, estimate);
 
   const inboxSync = await ensureInboxCachedForBriefing();
-  if (inboxSync.reason === 'gmail_not_connected') {
+  if (inboxSync.reason === 'mail_not_connected' || inboxSync.reason === 'gmail_not_connected') {
     throw new BriefingGmailNotConnectedError();
   }
   if (inboxSync.reason?.startsWith('gmail_list_failed')) {

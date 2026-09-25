@@ -31,7 +31,7 @@ export function runSentPoll(): Promise<SentPollReport> {
 async function doSentPoll(): Promise<SentPollReport> {
   const provider = getActiveMailProvider();
   if (!provider.isConnected()) {
-    return empty({ ran: false, reason: 'gmail_not_connected' });
+    return empty({ ran: false, reason: 'mail_not_connected' });
   }
 
   const userEmail = provider.getConnectedEmail();
@@ -39,7 +39,7 @@ async function doSentPoll(): Promise<SentPollReport> {
   try {
     ids = await provider.listSentMessageRefs({ maxResults: 20 });
   } catch (err) {
-    return empty({ ran: false, reason: `gmail_sent_list_failed:${(err as Error).message}` });
+    return empty({ ran: false, reason: `mail_sent_list_failed:${(err as Error).message}` });
   }
 
   const pending = ids.filter((m) => !processedSentRepo.has(m.id));

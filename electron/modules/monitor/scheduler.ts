@@ -46,7 +46,7 @@ function nextDelayMs(): number {
 async function tick(): Promise<void> {
   try {
     const report = await runPoll();
-    if (!report.ran && report.reason && !report.reason.startsWith('gmail_not_connected')) {
+    if (!report.ran && report.reason && !report.reason.startsWith('mail_not_connected')) {
       state.failureCount = Math.min(state.failureCount + 1, 5);
     } else {
       state.failureCount = 0;

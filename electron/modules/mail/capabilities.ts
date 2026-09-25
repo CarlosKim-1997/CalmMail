@@ -36,7 +36,7 @@ export const MAIL_CAPABILITIES: Record<MailProviderId, MailCapabilities> = {
     canMarkRead: true,
     canOpenInWeb: false,
     auth: ['oauth2', 'app_password', 'password'],
-    implemented: false,
+    implemented: true,
   },
   pop: {
     globalMessageIds: false,
