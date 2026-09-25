@@ -7,5 +7,15 @@
 
 export * from './types';
 export { MAIL_CAPABILITIES, getMailCapabilities } from './capabilities';
+export {
+  type MailIdentity,
+  type MailIdentityInput,
+  buildMailIdentity,
+  deriveCanonicalMessageId,
+  deriveThreadKey,
+  normalizeMessageId,
+  parseReferenceIds,
+  fallbackMessageHash,
+} from './identity';
 export { gmailProvider } from './gmailProvider';
 export { getActiveMailProvider, getMailProvider } from './registry';

@@ -19,6 +19,29 @@ interface Migration {
 
 const MIGRATIONS: Migration[] = [
   {
+    id: 5,
+    name: 'email_provider_identity',
+    up: (db) => {
+      // Provider-agnostic identity columns. Additive + backfilled so existing
+      // Gmail rows keep working unchanged: `id` already holds the globally
+      // unique Gmail message id (== canonical id for Gmail), and the canonical
+      // thread key equals the native Gmail thread id.
+      db.exec(`
+        ALTER TABLE emails ADD COLUMN provider TEXT NOT NULL DEFAULT 'gmail';
+        ALTER TABLE emails ADD COLUMN account_id TEXT NOT NULL DEFAULT 'gmail';
+        ALTER TABLE emails ADD COLUMN rfc_message_id TEXT;
+        ALTER TABLE emails ADD COLUMN thread_key TEXT;
+      `);
+      db.exec(`UPDATE emails SET thread_key = thread_id WHERE thread_key IS NULL;`);
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_emails_account_thread
+          ON emails(account_id, thread_key);
+        CREATE INDEX IF NOT EXISTS idx_emails_rfc_message_id
+          ON emails(rfc_message_id);
+      `);
+    },
+  },
+  {
     id: 4,
     name: 'sender_profiles_and_signals',
     up: (db) => {

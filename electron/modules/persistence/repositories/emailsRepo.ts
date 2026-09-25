@@ -7,6 +7,8 @@ import type {
   NotificationPriority,
 } from '@shared/types';
 import { NON_IMPORTANT_CATEGORIES } from '@main/modules/rules/categorize';
+import { MAIL_CAPABILITIES } from '@main/modules/mail/capabilities';
+import { buildMailIdentity, type MailIdentity } from '@main/modules/mail/identity';
 
 interface EmailRow {
   id: string;
@@ -25,6 +27,12 @@ interface EmailRow {
   seen_by_user: number;
   category: EmailCategory;
   open_count: number;
+  // Provider-agnostic identity (migration 5). Present on all rows post-migration
+  // but typed optional so older read paths stay tolerant.
+  provider?: string;
+  account_id?: string;
+  rfc_message_id?: string | null;
+  thread_key?: string | null;
 }
 
 function rowToEmail(r: EmailRow): EmailSummary {
@@ -57,14 +65,34 @@ const NON_IMPORTANT_LIST = Array.from(NON_IMPORTANT_CATEGORIES);
 const NON_IMPORTANT_PLACEHOLDERS = NON_IMPORTANT_LIST.map(() => '?').join(',');
 
 export const emailsRepo = {
-  upsert(email: EmailSummary): EmailSummary {
+  /**
+   * Insert or update an email row.
+   *
+   * `identity` carries the provider-agnostic canonical id / thread key. When
+   * omitted (the current Gmail path), a Gmail-compatible identity is derived
+   * from the summary — canonical id == Gmail message id and thread key ==
+   * Gmail thread id — so behavior is unchanged and the identity columns are
+   * still populated. Providers without global ids (IMAP) pass an explicit
+   * identity whose `canonicalId` should match `email.id`.
+   */
+  upsert(email: EmailSummary, identity?: MailIdentity): EmailSummary {
+    const ident =
+      identity ??
+      buildMailIdentity({
+        provider: 'gmail',
+        accountId: 'gmail',
+        capabilities: MAIL_CAPABILITIES.gmail,
+        providerMessageId: email.id,
+        providerThreadId: email.threadId,
+      });
     getDb()
       .prepare(
         `INSERT INTO emails
            (id, thread_id, from_email, from_name, to_json, subject, snippet,
             received_at, is_unread, labels_json, importance_score, priority,
-            reasons_json, seen_by_user, category, open_count)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+            reasons_json, seen_by_user, category, open_count,
+            provider, account_id, rfc_message_id, thread_key)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            thread_id = excluded.thread_id,
            from_email = excluded.from_email,
@@ -78,7 +106,9 @@ export const emailsRepo = {
            importance_score = excluded.importance_score,
            priority = excluded.priority,
            reasons_json = excluded.reasons_json,
-           category = excluded.category`,
+           category = excluded.category,
+           rfc_message_id = excluded.rfc_message_id,
+           thread_key = excluded.thread_key`,
       )
       .run(
         email.id,
@@ -96,6 +126,10 @@ export const emailsRepo = {
         JSON.stringify(email.reasons),
         email.category,
         email.openCount,
+        ident.provider,
+        ident.accountId,
+        ident.rfcMessageId,
+        ident.threadKey,
       );
     return email;
   },
