@@ -113,4 +113,6 @@ export const SecureKeys = {
   stripeCustomerId: 'billing.stripe.customerId',
   openrouterKey: 'ai.openrouter.apiKey',
   geminiKey: 'ai.gemini.apiKey',
+  /** IMAP account config + credentials (JSON blob), encrypted at rest. */
+  imapAccount: 'mail.imap.account',
 } as const;

@@ -8,10 +8,12 @@
  */
 
 import { gmailProvider } from './gmailProvider';
+import { imapProvider } from './imapProvider';
 import type { MailProvider, MailProviderId } from './types';
 
 const PROVIDERS: Partial<Record<MailProviderId, MailProvider>> = {
   gmail: gmailProvider,
+  imap: imapProvider,
 };
 
 /** The mail provider all read paths should currently go through. */
