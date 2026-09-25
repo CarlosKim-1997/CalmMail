@@ -6,8 +6,8 @@
 
 import type { BriefingInput } from './provider';
 import {
-  BRIEFING_SYSTEM_PROMPT_CLOUD_SPARSE,
-  buildBriefingUserPrompt,
+  BRIEFING_SYSTEM_PROMPT_TRIAGE_PASS2,
+  buildTriagePass2UserPrompt,
 } from './prompts';
 import {
   buildAmbiguousTriagePromptRows,
@@ -20,8 +20,8 @@ import { LOCAL_LLAMA_CTX, estimatePromptTokens } from './localBriefingBudget';
 import { LOCAL_TRIAGE_AI_AMBIGUOUS_CAP } from '@shared/triage';
 import type { TriageGroups } from '@shared/types';
 
-const PASS2_SAFETY = 48;
-const PASS2_MAX_TOKENS_CAP = 384;
+const PASS2_SAFETY = 40;
+const PASS2_MAX_TOKENS_CAP = 320;
 
 export interface LocalSparseTriagePlan {
   fits: boolean;
@@ -33,15 +33,11 @@ export interface LocalSparseTriagePlan {
 
 export function planLocalSparseTriageRequest(input: BriefingInput): LocalSparseTriagePlan {
   const ambiguous = buildAmbiguousTriagePromptRows(input);
-  const systemPrompt = BRIEFING_SYSTEM_PROMPT_CLOUD_SPARSE;
-  const userPrompt = buildBriefingUserPrompt(input, {
-    compact: true,
-    triageInPrompt: true,
-    ambiguousForTriage: ambiguous,
-  });
+  const systemPrompt = BRIEFING_SYSTEM_PROMPT_TRIAGE_PASS2;
+  const userPrompt = buildTriagePass2UserPrompt(input, ambiguous);
   const maxTokens = Math.min(
     PASS2_MAX_TOKENS_CAP,
-    Math.max(160, 96 + ambiguous.length * 22),
+    Math.max(128, 64 + ambiguous.length * 20),
   );
   const estIn =
     estimatePromptTokens(systemPrompt) + estimatePromptTokens(userPrompt);

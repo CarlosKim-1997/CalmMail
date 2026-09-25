@@ -28,9 +28,20 @@ Rules for triageOverrides:
 - Unread mail is ALREADY sorted by rules (see ambiguousForTriage.ruleDefault).
 - ONLY list ids where you disagree with ruleDefault or want a sharper reason.
 - Use ONLY emailId values from "ambiguousForTriage". At most one entry per id.
-- Use subject + snippet to judge urgency; do not invent facts.
+- Use subject, snippet, cat, pri, score, reasonTags; do not invent facts.
 - Omit the field or use [] when rule defaults are fine.
-- "reason" is optional, max 80 chars, outputLanguage.
+- "reason" is optional, max 80 chars, in outputLanguage (calm, no emoji).
+
+Bucket meaning:
+- now = human expects a reply soon, deadline/action, direct ask, security/account
+- today = worth opening today but not immediate (receipts, scheduling, FYI work)
+- later = low urgency reference; NOT for obvious human threads with questions
+
+Examples (override when ruleDefault is wrong):
+- ko: subject "Re: 견적 검토" + snippet question → now, reason "답장 요청"
+- en: snippet "Please review by EOD" + ruleDefault today → now, reason "Deadline today"
+- ko: shipping notification ruleDefault today → later, reason "배송 알림"
+- en: newsletter digest → later (leave ruleDefault if already later)
 `;
 
 /** Legacy cloud: full triageGroups (kept for reference / fallback parse). */
@@ -161,6 +172,30 @@ export const BRIEFING_SYSTEM_PROMPT_BRIEFING_ONLY = BRIEFING_SYSTEM_PROMPT_BODY.
   '\n}',
 );
 
+/** Local pass-2: triageOverrides only (minimal ctx). */
+export const BRIEFING_SYSTEM_PROMPT_TRIAGE_PASS2 = `
+You assign CalmMail mail triage overrides. Output a single JSON object only.
+
+Schema:
+{
+  "triageOverrides": [
+    { "emailId": string, "group": "now" | "today" | "later", "reason"?: string }
+  ]
+}
+
+Rules:
+- Each row in "ambiguousForTriage" has ruleDefault (already applied).
+- List ONLY ids you move to a different group or want a clearer reason for.
+- Use outputLanguage for reason ("ko" | "en"). Max 80 chars, calm tone.
+- now = reply needed, deadline, direct human ask; later = bulk/low signal;
+  today = middle ground worth a glance today.
+- Prefer [] when ruleDefault matches subject+snippet.
+
+Examples:
+- ko: { "emailId": "…", "group": "now", "reason": "마감 언급" }
+- en: { "emailId": "…", "group": "later", "reason": "Marketing digest" }
+`.trim();
+
 export type BriefingPromptOptions = {
   /** Smaller JSON for local llama-server (fits context; inspected first). */
   compact?: boolean;
@@ -279,4 +314,23 @@ export function buildBriefingUserPrompt(
           : {}),
       };
   return compact ? JSON.stringify(payload) : JSON.stringify(payload, null, 2);
+}
+
+/** Minimal user JSON for local triage pass-2 (no briefing fields). */
+export function buildTriagePass2UserPrompt(
+  input: BriefingInput,
+  ambiguous: AmbiguousTriagePromptRow[],
+): string {
+  return JSON.stringify({
+    outputLanguage: input.outputLanguage,
+    ambiguousForTriage: ambiguous,
+    ruleTriageCount: input.unreadForTriage.length,
+    unreadInScope: input.unreadInScope,
+    triageWithinDays: input.triageWithinDays,
+    learnedImportantCategories: input.learnedImportantCategories,
+    awaitedTopics: input.awaited.slice(0, 6).map((a) => ({
+      threadId: a.threadId,
+      subject: clampSubject(a.subject, 48),
+    })),
+  });
 }

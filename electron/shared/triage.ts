@@ -15,7 +15,7 @@ export const LOCAL_TRIAGE_USER_MAX = 40;
 export const LOCAL_TRIAGE_UNREAD_AI_CAP = LOCAL_TRIAGE_USER_MAX;
 
 /** Max ambiguous unread rows sent to local pass-2 (sparse triageOverrides). */
-export const LOCAL_TRIAGE_AI_AMBIGUOUS_CAP = 18;
+export const LOCAL_TRIAGE_AI_AMBIGUOUS_CAP = 24;
 
 export const TRIAGE_GROUP_IDS = ['now', 'today', 'later'] as const;
 

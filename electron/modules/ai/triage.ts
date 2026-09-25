@@ -30,6 +30,8 @@ export type AmbiguousTriagePromptRow = {
   snippet?: string;
   cat: string;
   pri: string;
+  score: number;
+  reasonTags: string[];
   ruleDefault: TriageGroupId;
 };
 
@@ -184,6 +186,8 @@ export function buildAmbiguousTriagePromptRows(
     snippet: clampSubject(e.snippet ?? '', SNIPPET_CLAMP),
     cat: e.category,
     pri: e.priority,
+    score: e.importanceScore,
+    reasonTags: e.reasons.slice(0, 3),
     ruleDefault: ruleGroupFor(e, input),
   }));
 }
