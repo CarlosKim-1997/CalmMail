@@ -18,6 +18,7 @@ import { registerIpcHandlers } from './ipc/registerHandlers';
 import { bindAuthWindowProvider } from './modules/gmail/authNotify';
 import { verifyGmailSession } from './modules/gmail/session';
 import { monitorScheduler } from './modules/monitor/scheduler';
+import { imapRealtime } from './modules/monitor/imapRealtime';
 import { localAiManager } from './modules/localAi/manager';
 import { notificationManager } from './modules/notification/manager';
 import { closeDb, getDb } from './modules/persistence/db';
@@ -149,12 +150,18 @@ if (!gotLock) {
     createWindow();
     createTray({ getWindow, showWindow });
 
-    monitorScheduler.start();
-    monitorScheduler.onTick((report) => {
+    const broadcastPollReport = (report: Parameters<typeof recordPollResult>[0]) => {
       recordPollResult(report);
       const w = getWindow();
       if (w) w.webContents.send(IpcChannels.evtMonitorTick, toMonitorPollReport(report));
-    });
+    };
+
+    monitorScheduler.start();
+    monitorScheduler.onTick(broadcastPollReport);
+
+    // IMAP real-time: push new mail through the same broadcast path as polling.
+    imapRealtime.onTick(broadcastPollReport);
+    void imapRealtime.start();
 
     if (getStoredTokens()) {
       void verifyGmailSession().then((ok) => {
@@ -185,6 +192,7 @@ if (!gotLock) {
         } catch (e) {
           console.warn('[local-ai] shutdown failed', e);
         } finally {
+          void imapRealtime.stop();
           monitorScheduler.stop();
           destroyTray();
           closeDb();

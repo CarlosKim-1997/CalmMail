@@ -204,6 +204,34 @@ function toFetchedMessage(
   return { summary, headerSignals: deriveHeaderSignals(headerMap) };
 }
 
+/**
+ * Fetch + normalize a UID range on an already-open client, returning each
+ * message paired with its UID (so callers can track the high-water mark).
+ */
+async function fetchEntriesOnClient(
+  client: ImapFlow,
+  account: ImapAccount,
+  range: string,
+): Promise<Array<{ uid: number; fetched: FetchedMessage }>> {
+  const msgs = await client.fetchAll(
+    range,
+    {
+      uid: true,
+      flags: true,
+      envelope: true,
+      bodyStructure: true,
+      headers: HEADER_FETCH_FIELDS,
+    },
+    { uid: true },
+  );
+  const out: Array<{ uid: number; fetched: FetchedMessage }> = [];
+  for (const msg of msgs) {
+    const snippet = await readSnippet(client, msg.uid, msg.bodyStructure);
+    out.push({ uid: msg.uid, fetched: toFetchedMessage(account, msg, snippet) });
+  }
+  return out;
+}
+
 /** List recent INBOX message references (UIDs), newest last. */
 export async function listInboxUids(
   account: ImapAccount,
@@ -246,29 +274,106 @@ export async function fetchMessagesByUid(
   try {
     const lock = await client.getMailboxLock('INBOX');
     try {
-      const msgs = await client.fetchAll(
-        numericUids.join(','),
-        {
-          uid: true,
-          flags: true,
-          envelope: true,
-          bodyStructure: true,
-          headers: HEADER_FETCH_FIELDS,
-        },
-        { uid: true },
-      );
-      const out: FetchedMessage[] = [];
-      for (const msg of msgs) {
-        const snippet = await readSnippet(client, msg.uid, msg.bodyStructure);
-        out.push(toFetchedMessage(account, msg, snippet));
-      }
-      return out.sort((a, b) => b.summary.receivedAt - a.summary.receivedAt);
+      const entries = await fetchEntriesOnClient(client, account, numericUids.join(','));
+      return entries
+        .map((e) => e.fetched)
+        .sort((a, b) => b.summary.receivedAt - a.summary.receivedAt);
     } finally {
       lock.release();
     }
   } finally {
     await client.logout();
   }
+}
+
+export interface ImapWatchHandle {
+  /** Stop watching and close the connection. */
+  close(): Promise<void>;
+}
+
+export interface ImapWatchOptions {
+  /**
+   * Safety re-sync interval (ms). In addition to IMAP IDLE push, drain the
+   * mailbox on this timer to recover missed pushes and to work with servers
+   * that don't emit unsolicited `EXISTS`. Set to 0 to rely on IDLE only.
+   */
+  resyncMs?: number;
+  onError?: (err: Error) => void;
+}
+
+const DEFAULT_RESYNC_MS = 60_000;
+
+/**
+ * Watch INBOX for new mail using IMAP IDLE, with a periodic safety re-sync.
+ *
+ * imapflow keeps the connection in IDLE and emits `exists` when new messages
+ * arrive; we also drain on a timer (`resyncMs`). On each trigger we fetch
+ * messages with UID at/above the high-water mark (`uidNext` at open, advanced
+ * as we go) and hand the normalized {@link FetchedMessage}s to `onNew`. The
+ * `UID N:*` range can return the highest existing message when nothing is new,
+ * so results are filtered by `uid >= startUid`.
+ */
+export async function watchInbox(
+  account: ImapAccount,
+  onNew: (messages: FetchedMessage[]) => void,
+  options: ImapWatchOptions = {},
+): Promise<ImapWatchHandle> {
+  const { resyncMs = DEFAULT_RESYNC_MS, onError } = options;
+  const client = makeClient(account);
+  if (onError) client.on('error', onError);
+  await client.connect();
+  const mailbox = await client.mailboxOpen('INBOX');
+  let nextUid = mailbox.uidNext;
+  let draining = false;
+  let pending = false;
+
+  const drain = async () => {
+    if (draining) {
+      pending = true;
+      return;
+    }
+    draining = true;
+    try {
+      do {
+        pending = false;
+        const startUid = nextUid;
+        const entries = await fetchEntriesOnClient(client, account, `${startUid}:*`);
+        const fresh = entries.filter((e) => e.uid >= startUid);
+        if (fresh.length > 0) {
+          nextUid = Math.max(...fresh.map((e) => e.uid)) + 1;
+          onNew(fresh.map((e) => e.fetched));
+        }
+      } while (pending);
+    } catch (err) {
+      onError?.(err as Error);
+    } finally {
+      draining = false;
+    }
+  };
+
+  client.on('exists', () => {
+    void drain();
+  });
+
+  const timer =
+    resyncMs > 0 ? setInterval(() => void drain(), resyncMs) : null;
+  if (timer && typeof timer.unref === 'function') timer.unref();
+
+  return {
+    async close() {
+      if (timer) clearInterval(timer);
+      client.removeAllListeners('exists');
+      try {
+        await client.logout();
+      } catch {
+        try {
+          client.close();
+        } catch {
+          /* already closed */
+        }
+      }
+    },
+  };
 }
 
 /** Mark messages read server-side (STORE +FLAGS \Seen). */
