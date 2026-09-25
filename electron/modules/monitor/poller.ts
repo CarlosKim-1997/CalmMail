@@ -108,7 +108,14 @@ async function doPoll(): Promise<PollReport> {
       userPrimaryEmail: userPrimary,
       headerSignals: m.headerSignals,
     });
-    emailsRepo.upsert(out);
+    emailsRepo.upsert(out, {
+      provider: provider.id,
+      accountId: provider.accountKey(),
+      canonicalId: out.id,
+      providerMessageId: '',
+      rfcMessageId: null,
+      threadKey: out.threadId,
+    });
     classified.push(out);
 
     if (out.priority === 'HIGH') {

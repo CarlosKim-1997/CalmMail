@@ -42,6 +42,10 @@ export const IpcChannels = {
   gmailReconnect: 'gmail:reconnect',
   gmailDisconnect: 'gmail:disconnect',
   gmailRequestModifyScope: 'gmail:requestModifyScope',
+  // IMAP account
+  imapAutoconfig: 'imap:autoconfig',
+  imapConnect: 'imap:connect',
+  imapDisconnect: 'imap:disconnect',
   shellOpenExternal: 'shell:openExternal',
 
   // Inbox (read-only projections)
@@ -135,6 +139,22 @@ export interface IpcContract {
   [IpcChannels.gmailReconnect]: { req: void; res: AuthStatus };
   [IpcChannels.gmailDisconnect]: { req: void; res: AuthStatus };
   [IpcChannels.gmailRequestModifyScope]: { req: void; res: AuthStatus };
+  [IpcChannels.imapAutoconfig]: {
+    req: { email: string };
+    res: { host: string; port: number; secure: boolean } | null;
+  };
+  [IpcChannels.imapConnect]: {
+    req: {
+      email: string;
+      user: string;
+      pass: string;
+      host: string;
+      port: number;
+      secure: boolean;
+    };
+    res: AuthStatus;
+  };
+  [IpcChannels.imapDisconnect]: { req: void; res: AuthStatus };
   [IpcChannels.shellOpenExternal]: { req: { url: string }; res: { ok: true } };
 
   [IpcChannels.inboxRecent]: { req: { limit?: number }; res: EmailSummary[] };

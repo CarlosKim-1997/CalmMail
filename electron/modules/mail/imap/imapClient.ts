@@ -236,14 +236,18 @@ export async function fetchMessagesByUid(
   account: ImapAccount,
   uids: string[],
 ): Promise<FetchedMessage[]> {
-  if (uids.length === 0) return [];
+  // IMAP addresses messages by numeric UID. Callers that pass canonical ids
+  // (e.g. read-state refresh keyed on stored ids) get an empty result rather
+  // than an "invalid UID range" error.
+  const numericUids = uids.filter((u) => /^\d+$/.test(u));
+  if (numericUids.length === 0) return [];
   const client = makeClient(account);
   await client.connect();
   try {
     const lock = await client.getMailboxLock('INBOX');
     try {
       const msgs = await client.fetchAll(
-        uids.join(','),
+        numericUids.join(','),
         {
           uid: true,
           flags: true,

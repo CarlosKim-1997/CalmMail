@@ -44,7 +44,10 @@ export function OnboardingScreen() {
         <p className="subtle" style={{ margin: 0 }}>{t('onboarding.cardLine')}</p>
       </div>
 
-      <div className="row" style={{ justifyContent: 'flex-end' }}>
+      <div className="row" style={{ justifyContent: 'flex-end', gap: 8 }}>
+        <button type="button" className="btn ghost" onClick={() => goto('imap-login')}>
+          {t('onboarding.imapCta')}
+        </button>
         <button type="button" className="btn primary" onClick={() => goto('gmail-login')}>
           {t('onboarding.cta')}
         </button>

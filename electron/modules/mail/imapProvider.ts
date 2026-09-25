@@ -33,6 +33,10 @@ export const imapProvider: MailProvider = {
     return imapAccountStore.get()?.user ?? null;
   },
 
+  accountKey(): string {
+    return imapAccountStore.get()?.accountId ?? 'imap';
+  },
+
   async listInboxMessageRefs(opts: MailListOptions = {}) {
     const account = imapAccountStore.get();
     if (!account) return [];

@@ -732,9 +732,18 @@ export interface LocalAiRecommendation {
 
 // ---------- Auth ----------
 
+/** Which mail backend the app is currently reading from. */
+export type ActiveMailProvider = 'gmail' | 'imap' | 'none';
+
 export interface AuthStatus {
   gmailConnected: boolean;
   gmailEmail: string | null;
+  /** True when an IMAP account is linked. */
+  imapConnected: boolean;
+  /** Primary address of the linked IMAP account. */
+  imapEmail: string | null;
+  /** Resolved active provider that currently has a working connection. */
+  activeProvider: ActiveMailProvider;
   /** True when stored tokens can reach the Gmail API right now. */
   gmailSessionHealthy: boolean;
   /** True when tokens exist but need a one-tap browser re-approval. */
